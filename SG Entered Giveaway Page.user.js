@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SG Entered Giveaway Page
 // @namespace    https://steamcommunity.com/id/Ruphine/
-// @version      3
+// @version      5
 // @description  Added point value, creator, level, and giveaway type at Giveaway > Entered page.
 // @author       Ruphine
 // @match        https://www.steamgifts.com/giveaways/entered*
@@ -112,8 +112,8 @@ function GetGiveawayData(element){
 function ShowGiveawayData(element, data){
 	if(SHOW_POINT){
 		var title = $(element).find(".table__column--width-fill p a")[0];
-		var text = $(title).text() + " (" + data.point + "P)";
-		$(title).text(text);
+		var node = document.createTextNode(" (" + data.point + "P)");
+		title.insertBefore(node, title.firstChild.nextSibling); 
 	}
 	if(SHOW_CREATOR){
 		var timeleft = $(element).find(".table__column--width-fill p span");
