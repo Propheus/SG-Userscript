@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SG Entered Giveaway Page
 // @namespace    https://steamcommunity.com/id/Ruphine/
-// @version      3
+// @version      4
 // @description  Added point value, creator, level, and giveaway type at Giveaway > Entered page.
 // @author       Ruphine
 // @match        https://www.steamgifts.com/giveaways/entered*
@@ -34,7 +34,7 @@ var observer = new MutationObserver(function(mutations)
 		ProcessPage(mutation.addedNodes);
 	});
 });
-var config = {childList: true, attributes: false, characterData: false};
+var config = {childList: true, attributes: false, characterData: false, subtree: true};
 $(".widget-container>div").each(function(index, element){
 	observer.observe(element, config);
 });
@@ -42,16 +42,16 @@ $(".widget-container>div").each(function(index, element){
 function ProcessPage(parent){
 	if(SHOW_TYPE){
 		$(parent).find(".table__heading .table__column--width-fill").after('<div class="table__column--width-small text-center">Type</div>');
-		$(parent).find(".table__rows .table__column--width-fill").after('<div class="table__column--width-small text-center table__column-type"></div>');
+		$(parent).find(".table__row-inner-wrap .table__column--width-fill").after('<div class="table__column--width-small text-center table__column-type"></div>');
 	}
 	if(SHOW_LEVEL){
 		$(parent).find(".table__heading .table__column--width-fill").after('<div class="table__column--width-small text-center">Level</div>');
-		$(parent).find(".table__rows .table__column--width-fill").after('<div class="table__column--width-small text-center table__column-level"></div>');
+		$(parent).find(".table__row-inner-wrap .table__column--width-fill").after('<div class="table__column--width-small text-center table__column-level"></div>');
 	}
 	if(SHOW_TYPE && SHOW_LEVEL)
 		$(parent).find(".table__column--width-small").css("width", 0); // remove responsive column width, to gain more spaces
 	//process each giveaway
-	$(parent).find(".table__row-outer-wrap").each(function(index, element){
+	$(parent).find(".table__row-inner-wrap").each(function(index, element){
 		if($(element).find("input").length > 0 || PROCESS_ENDED_GA){ //check if giveaway is still running. ended giveaways don't have remove button.
 			var GiveawayID = $(element).find(".table__column__heading")[0].href.split("/")[4];
 			var Giveaway_data = $.grep(CachedData, function(e){ return e.id == GiveawayID; });
@@ -61,6 +61,7 @@ function ProcessPage(parent){
 				ShowGiveawayData(element, Giveaway_data[0]);
 		}
 	});
+	$(".table__rows>.table__heading>.table__column--width-small").remove(); //for SG++ weird table__heading inside table__rows
 }
 
 function GetGiveawayData(element){
