@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SG Entered Giveaway Page
 // @namespace    https://steamcommunity.com/id/Ruphine/
-// @version      5
+// @version      6
 // @description  Added point value, creator, level, and giveaway type at Giveaway > Entered page.
 // @author       Ruphine
 // @match        https://www.steamgifts.com/giveaways/entered*
@@ -12,11 +12,12 @@
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
-const PROCESS_ENDED_GA = false; //change to [true] if you want to show info for ended GA too
-const SHOW_POINT   = true; //change to [false] if you don't want to show giveaway point value
-const SHOW_CREATOR = true; //change to [false] if you don't want to show giveaway creator
-const SHOW_LEVEL   = true; //change to [false] if you don't want to show giveaway level
-const SHOW_TYPE    = true; //change to [false] if you don't want to show giveaway type
+const PROCESS_ENDED_GA = false; //change to [true] to enable info for ended GA too
+const SHOW_POINT   = true; //change to [false] to disable giveaway point value
+const SHOW_CREATOR = true; //change to [false] to disable giveaway creator
+const SHOW_LEVEL   = true; //change to [false] to disable giveaway level
+const SHOW_TYPE    = true; //change to [false] to disable giveaway type
+const SHOW_STEAM   = true; //change to [false] to disable steam store page link
 const CACHE_TIME = 60*60*1000; //1 hour. cache data will be deleted after 1 hour not opening https://www.steamgifts.com/giveaways/entered
 
 var LastSavedData = GM_getValue("lastchecked", 0);
@@ -28,8 +29,7 @@ else
 	CachedData = JSON.parse(GM_getValue("cache", "[]"));
 
 ProcessPage($(".widget-container"));
-var observer = new MutationObserver(function(mutations)
-{
+var observer = new MutationObserver(function(mutations){
 	$.each(mutations, function(index, mutation){
 		ProcessPage(mutation.addedNodes);
 	});
@@ -40,6 +40,7 @@ $(".widget-container>div").each(function(index, element){
 });
 
 function ProcessPage(parent){
+	//Add columns
 	if(SHOW_TYPE){
 		$(parent).find(".table__heading .table__column--width-fill").after('<div class="table__column--width-small text-center">Type</div>');
 		$(parent).find(".table__row-inner-wrap .table__column--width-fill").after('<div class="table__column--width-small text-center table__column-type"></div>');
@@ -50,6 +51,7 @@ function ProcessPage(parent){
 	}
 	if(SHOW_TYPE && SHOW_LEVEL)
 		$(parent).find(".table__column--width-small").css("width", 0); // remove responsive column width, to gain more spaces
+	
 	//process each giveaway
 	$(parent).find(".table__row-inner-wrap").each(function(index, element){
 		if($(element).find("input").length > 0 || PROCESS_ENDED_GA){ //check if giveaway is still running. ended giveaways don't have remove button.
@@ -98,7 +100,9 @@ function GetGiveawayData(element){
 				else
 					type = "Public";
 
-				var Giveaway_data = {id: GiveawayID, point: point, creator: creator, level: level, type: type};
+				var store_url = $(page).find(".global__image-outer-wrap--game-large")[0].href;
+
+				var Giveaway_data = {id: GiveawayID, point: point, creator: creator, level: level, type: type, store: store_url};
 				ShowGiveawayData(element, Giveaway_data);
 				CachedData.push(Giveaway_data);
 				GM_setValue("cache", JSON.stringify(CachedData));
@@ -114,7 +118,7 @@ function ShowGiveawayData(element, data){
 	if(SHOW_POINT){
 		var title = $(element).find(".table__column--width-fill p a")[0];
 		var node = document.createTextNode(" (" + data.point + "P)");
-		title.insertBefore(node, title.firstChild.nextSibling); 
+		title.insertBefore(node, title.firstChild.nextSibling);
 	}
 	if(SHOW_CREATOR){
 		var timeleft = $(element).find(".table__column--width-fill p span");
@@ -124,4 +128,9 @@ function ShowGiveawayData(element, data){
 		$(element).find(".table__column-level")[0].innerHTML = data.level;
 	if(SHOW_TYPE)
 		$(element).find(".table__column-type")[0].innerHTML = data.type;
+	if(SHOW_STEAM){
+		var title = $(element).find(".table__column--width-fill p a")[0];
+		var icon = '<a class="giveaway__icon" rel="nofollow" target="_blank" href="' + data.store + '"><i class="fa fa-steam" style="vertical-align: initial;"></i></a>';
+		$(title).append(icon);
+	}
 }
