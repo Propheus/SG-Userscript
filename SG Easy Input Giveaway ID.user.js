@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SG Easy Input Giveaway ID
 // @namespace    https://steamcommunity.com/id/Ruphine/
-// @version      1
+// @version      0.1
 // @description  test
 // @author       Ruphine
 // @match        https://www.steamgifts.com/*
