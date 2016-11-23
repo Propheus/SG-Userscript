@@ -1,10 +1,12 @@
 // ==UserScript==
-// @name         SG Entered Giveaway Page
+// @name         SG Entered / Created / Won Giveaway Page
 // @namespace    https://steamcommunity.com/id/Ruphine/
 // @version      6
 // @description  Added point value, creator, level, and giveaway type at Giveaway > Entered page.
 // @author       Ruphine
 // @match        https://www.steamgifts.com/giveaways/entered*
+// @match        https://www.steamgifts.com/giveaways/created*
+// @match        https://www.steamgifts.com/giveaways/won*
 // @icon         https://cdn.steamgifts.com/img/favicon.ico
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js
 // @grant        GM_setValue
@@ -18,17 +20,21 @@ const SHOW_CREATOR = true; //change to [false] to disable giveaway creator
 const SHOW_LEVEL   = true; //change to [false] to disable giveaway level
 const SHOW_TYPE    = true; //change to [false] to disable giveaway type
 const SHOW_STEAM   = true; //change to [false] to disable steam store page link
-const CACHE_TIME = 60*60*1000; //1 hour. cache data will be deleted after 1 hour not opening https://www.steamgifts.com/giveaways/entered
+const CACHE_TIME = 60*60*1000; //1 hour. cache data will be deleted after 1 hour not opening any of created/won/entered page.
 
 var LastSavedData = GM_getValue("lastchecked", 0);
 var CachedData;
 
 if(LastSavedData <  Date.now() - CACHE_TIME) //delete cache if over CACHE_TIME has passed
 	CachedData = [];
-else
+else{
 	CachedData = JSON.parse(GM_getValue("cache", "[]"));
+	GM_setValue("lastchecked", Date.now()); //refresh cache time countdown
+}
 
 ProcessPage($(".widget-container"));
+
+//eventlistener to scan new page added by endless scroll
 var observer = new MutationObserver(function(mutations){
 	$.each(mutations, function(index, mutation){
 		ProcessPage(mutation.addedNodes);
@@ -49,12 +55,13 @@ function ProcessPage(parent){
 		$(parent).find(".table__heading .table__column--width-fill").after('<div class="table__column--width-small text-center">Level</div>');
 		$(parent).find(".table__row-inner-wrap .table__column--width-fill").after('<div class="table__column--width-small text-center table__column-level"></div>');
 	}
-	if(SHOW_TYPE && SHOW_LEVEL)
-		$(parent).find(".table__column--width-small").css("width", 0); // remove responsive column width, to gain more spaces
-	
+	$(parent).find(".table__column--width-small").css("width", 0); // remove responsive column width, to gain more spaces
+
 	//process each giveaway
 	$(parent).find(".table__row-inner-wrap").each(function(index, element){
-		if($(element).find("input").length > 0 || PROCESS_ENDED_GA){ //check if giveaway is still running. ended giveaways don't have remove button.
+		var timeleft = $(element).find(".table__column--width-fill p")[1].textContent;
+		//check if giveaway is still running. currently running giveaway will have "remaining" in the timeleft text. will still run in won page
+		if(/remaining/.test(timeleft) || PROCESS_ENDED_GA || /\/giveaways\/won/.test(window.location.href)){
 			var GiveawayID = $(element).find(".table__column__heading")[0].href.split("/")[4];
 			var Giveaway_data = $.grep(CachedData, function(e){ return e.id == GiveawayID; });
 			if(Giveaway_data.length === 0)// if no data saved
@@ -72,8 +79,7 @@ function GetGiveawayData(element){
 		method: "GET",
 		timeout: 10000,
 		url: "/giveaway/" + GiveawayID + "/",
-		onload: function(result)
-		{
+		onload: function(result){
 			var page = result.responseText;
 
 			var point = $(page).find(".featured__heading__small");
@@ -120,9 +126,9 @@ function ShowGiveawayData(element, data){
 		var node = document.createTextNode(" (" + data.point + "P)");
 		title.insertBefore(node, title.firstChild.nextSibling);
 	}
-	if(SHOW_CREATOR){
-		var timeleft = $(element).find(".table__column--width-fill p span");
-		$(timeleft).after(" by <a class='giveaway__username' href='/user/" + data.creator + "'>" + data.creator + "</a>");
+	if(SHOW_CREATOR && !/\/giveaways\/created/.test(window.location.href)){ //prevent run in created page
+		var timeleft = $(element).find(".table__column--width-fill p")[1];
+		$(timeleft).append(" by <a class='giveaway__username' href='/user/" + data.creator + "'>" + data.creator + "</a>");
 	}
 	if(SHOW_LEVEL)
 		$(element).find(".table__column-level")[0].innerHTML = data.level;
